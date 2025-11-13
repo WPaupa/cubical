@@ -2,6 +2,7 @@ module SP.Axiomatic where
 
 open import Cubical.Foundations.Prelude
 open import Cubical.Foundations.Univalence
+open import Cubical.Foundations.Isomorphism
 
 open import Cubical.Algebra.Group
 open import Cubical.Algebra.Group.GroupPath
@@ -126,44 +127,15 @@ H⁰CP²≃ℤ : GroupIso (coHomGr 0 CP²) ℤGroup
 H⁰CP²≃ℤ = H⁰-connected baseCP² isConnectedCP²
 
 
-{-
-data CommStrSP (X : Type₀) : Type₁ where
-    cons : (Bool → X) → CommStrSP X
-    comm_c : (Y : 2-EltType₀) → (fst Y → X) → CommStrSP X
-    comm_e : comm_c Bool*  ≡ cons 
+unitUniq : (X : Type) → (bp : X) → 
+    ((Y : Type) → (f : X → Y) → (x : X) → f x ≡ f bp) → X ≡ Unit
+unitUniq X bp eq = ua (isoToEquiv (iso f g sec ret)) where
+    f : X → Unit
+    f x = tt
+    g : Unit → X
+    g tt = bp
+    sec : (b : Unit) → f (g b) ≡ b
+    sec tt = refl
 
-data CommSPSimp (X : Type₀) : Type₁ where
-    comms_c : (Y : 2-EltType₀) → (fst Y → X) → CommSPSimp X
-
-commEquiv : {X : Type₀} → CommStrSP X ≡ CommSPSimp X
-commEquiv = isoToPath (iso f g eq1 eq2) where
-    f : CommStrSP X → CommSPSimp X
-    f (cons x) = comms_c Bool* x
-    f (comm_c Y x) = comms_c Y x
-    f (comm_e i x) = {!   !}
-
-    g : CommSPSimp X → CommStrSP X
-    g = {!!}
-
-    eq1 : section f g
-    eq1 = {!!}
-
-    eq2 : retract f g
-    eq2 = {!!}
-
-commWorks : CommStrSP One ≡ One₁
-commWorks = isoToPath (iso f g eq1 eq2) where
-    f : CommStrSP One → One₁
-    f (cons x) = {!   !}
-    f (comm Y c x) = {!   !}
-    f (comm i e x) = {!   !}
-
-    g : One₁ → CommStrSP One
-    g = {!!}
-
-    eq1 : section f g
-    eq1 = {!!}
-
-    eq2 : retract f g
-    eq2 = {!!}
--}
+    ret : (x : X) → g (f x) ≡ x
+    ret x = sym (eq X (λ x → x) x) 
