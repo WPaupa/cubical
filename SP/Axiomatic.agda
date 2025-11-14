@@ -1,6 +1,7 @@
 module SP.Axiomatic where
 
 open import SP.LEMConnectedness
+open import SP.ComStr
 
 open import Cubical.Foundations.Prelude
 open import Cubical.Foundations.Univalence
@@ -8,32 +9,13 @@ open import Cubical.Foundations.Isomorphism
 
 open import Cubical.HITs.PropositionalTruncation as PT
 
-open import Cubical.HITs.RPn.Base 
-open import Cubical.HITs.S1
-open import Cubical.HITs.S2
-open import Cubical.HITs.Susp
-
 open import Cubical.Homotopy.Connected
 
-open import Cubical.Data.Bool hiding (Bool*)
+open import Cubical.Data.Bool
 open import Cubical.Data.Unit
 open import Cubical.Data.Empty
 open import Cubical.Data.Sum
 open import Cubical.Data.Sigma
-
-
-record commf (X Y : Type) : Type₁ where
-    field
-        f : (Bool → X) → Y
-        comstr : (B : 2-EltType₀) → (fst B → X) → Y
-        coh : comstr Bool* ≡ f
-
-composeCommf : {X Y Z : Type} → commf X Y → (Y → Z) → commf X Z
-composeCommf (record {f = f; comstr = comstr; coh = coh}) g = record { 
-        f = λ x → g (f x); 
-        comstr = λ B x → g (comstr B x); 
-        coh = cong (λ a x → g (a x)) coh 
-    }
 
 isSP : Type → Type → Type₁
 isSP X SPX = Σ[ f ∈ commf X SPX ] ((T : Type) → (g : commf X T) → ∃![ h ∈ (SPX → T) ] ((x : Bool → X) → h (f .commf.f x) ≡ g .commf.f x))

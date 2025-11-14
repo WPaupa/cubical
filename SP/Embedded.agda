@@ -6,26 +6,15 @@ open import Cubical.Foundations.Equiv
 open import Cubical.Foundations.Univalence
 
 open import Cubical.HITs.PropositionalTruncation as PT
+open import Cubical.HITs.RPn.Base
 
-open import Cubical.Data.Bool
+open import Cubical.Data.Bool hiding (Bool*)
 open import Cubical.Data.Unit
-
--- miałem trochę problemów z poziomem,
--- na którym powinien być RP∞, jak na razie
--- robię wersję roboczą, w której jest na poziomie 1.
--- Docelowo powinien zapewne być na poziomie l+1
--- dla Boola i typu A na poziomie l, ale to utrudniało
--- mi zdefiniowanie SP
-RP∞ : Type₁
-RP∞ = Σ[ A ∈ Type ] ∥ A ≡ Bool ∥₁ 
-
-b0 : RP∞ -- basepoint w RP∞
-b0 = (Bool , ∣ refl ∣₁)
 
 -- Definiujemy uproszczoną wersję SP X,
 -- jako po prostu funkcje z każdego elementu RP∞ w X
 data comSP (X : Type₁) : Type₁ where
-  com : (B : RP∞) → (fst B → X) → comSP X
+  com : (B : 2-EltType₀) → (fst B → X) → comSP X
 
 -- I faktyczne SP X jako takie funkcje plus constraint,
 -- że na funkcji z basepointu RP∞ musi się zgadzać
@@ -33,9 +22,9 @@ data comSP (X : Type₁) : Type₁ where
 -- chcielibyśmy, żeby to była ta injekcja + jej
 -- struktura komutacji)
 data comSP' (X : Type₁) : Type₁ where
-  com' : (B : RP∞) → (fst B → X) → comSP' X
+  com' : (B : 2-EltType₀) → (fst B → X) → comSP' X
   inj' : (Bool → X) → comSP' X
-  coh' : (f : Bool → X) → com' b0 f ≡ inj' f
+  coh' : (f : Bool → X) → com' Bool* f ≡ inj' f
 
 -- Ale możemy pokazać, że te dwie wersje SP X
 -- są zgodne (przynajmniej dla typów na poziomie 1,
@@ -47,8 +36,8 @@ consist {X} = ua (isoToEquiv (iso f g sec ret)) where
 
   g : comSP' X → comSP X
   g (com' B x) = com B x
-  g (inj' x) = com b0 x
-  g (coh' x i) = com b0 x
+  g (inj' x) = com Bool* x
+  g (coh' x i) = com Bool* x
 
   sec : (b : comSP' X) → f (g b) ≡ b
   sec (com' B x) = refl
@@ -71,13 +60,13 @@ isPropXToUnit X f g = funExt (λ x → isPropUnit* (f x) (g x))
 -- Ta niepoprawność w tym wariancie jest dosyć intuicyjna:
 -- nasza przestrzeń jest konstruowana przez com x c,
 -- gdzie x : RP∞, a c : Unit, więc de facto sprowadza się do RP∞.
-comOneRP : comSP Unit* ≡ RP∞
+comOneRP : comSP Unit* ≡ 2-EltType₀
 comOneRP = ua (isoToEquiv (iso f g sec ret)) where
-  f : comSP Unit* → RP∞
+  f : comSP Unit* → 2-EltType₀
   f (com (bool , path) c) = (bool , path)
-  g : RP∞ → comSP Unit*
+  g : 2-EltType₀ → comSP Unit*
   g (bool , path) = com (bool , path) (λ x → tt*)
-  sec : (b : RP∞) → f (g b) ≡ b
+  sec : (b : 2-EltType₀) → f (g b) ≡ b
   sec (bool , path) = refl
   ret : (b : comSP Unit*) → g (f b) ≡ b
   ret (com (bool , path) c) =
