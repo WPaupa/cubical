@@ -1,20 +1,12 @@
 module SP.Axiomatic where
 
+open import SP.LEMConnectedness
+
 open import Cubical.Foundations.Prelude
 open import Cubical.Foundations.Univalence
 open import Cubical.Foundations.Isomorphism
 
-open import Cubical.Algebra.Group
-open import Cubical.Algebra.Group.GroupPath
-open import Cubical.Algebra.Group.Instances.Int
-open import Cubical.Algebra.Group.Morphisms
-open import Cubical.Algebra.Group.MorphismProperties
-open import Cubical.Algebra.Group.Instances.Unit
-open import Cubical.ZCohomology.GroupStructure
-open import Cubical.ZCohomology.Groups.Connected
-
 open import Cubical.HITs.PropositionalTruncation as PT
-open import Cubical.HITs.Truncation as T
 
 open import Cubical.HITs.RPn.Base 
 open import Cubical.HITs.S1
@@ -26,105 +18,86 @@ open import Cubical.Homotopy.Connected
 open import Cubical.Data.Bool hiding (Bool*)
 open import Cubical.Data.Unit
 open import Cubical.Data.Empty
+open import Cubical.Data.Sum
 open import Cubical.Data.Sigma
 
 
-record commf (X Y : Type₀) : Type₁ where
+record commf (X Y : Type) : Type₁ where
     field
         f : (Bool → X) → Y
         comstr : (B : 2-EltType₀) → (fst B → X) → Y
         coh : comstr Bool* ≡ f
 
-composeCommf : {X Y Z : Type₀} → commf X Y → (Y → Z) → commf X Z
+composeCommf : {X Y Z : Type} → commf X Y → (Y → Z) → commf X Z
 composeCommf (record {f = f; comstr = comstr; coh = coh}) g = record { 
         f = λ x → g (f x); 
         comstr = λ B x → g (comstr B x); 
         coh = cong (λ a x → g (a x)) coh 
     }
 
-isSP : Type₀ → Type₀ → Type₁
-isSP X SPX = Σ[ f ∈ commf X SPX ] ((T : Type₀) → (g : commf X T) → ∃![ h ∈ (SPX → T) ] ((x : Bool → X) → h (f .commf.f x) ≡ g .commf.f x))
+isSP : Type → Type → Type₁
+isSP X SPX = Σ[ f ∈ commf X SPX ] ((T : Type) → (g : commf X T) → ∃![ h ∈ (SPX → T) ] ((x : Bool → X) → h (f .commf.f x) ≡ g .commf.f x))
 
-postulate
-    CP² : Type₀
-    CP²=SPS² : isSP S² CP²
+module _
+    {X : Type}
+    (bp : X)
+    (SPX : Type)
+    (SPX=SPX : isSP X SPX) 
+    (AC : {A : Type} {B : A → Type} → ((a : A) → ∥ B a ∥₁) → ∥ ((a : A) → B a) ∥₁)
+    (LEM : (X : Type) → isProp X → (X ⊎ (X → ⊥))) where
 
-makef : {X : Type₀} → X → X → Bool → X
-makef a b true = a
-makef a b false = b
+    injSPX : (Bool → X) → SPX
+    injSPX = fst SPX=SPX .commf.f
 
-injCP² : (Bool → S²) → CP²
-injCP² = fst CP²=SPS² .commf.f
+    univSPX : (T : Type) → (g : commf X T) → ∃![ h ∈ (SPX → T) ] ((x : Bool → X) → h (injSPX x) ≡ g .commf.f x)
+    univSPX = snd SPX=SPX
 
-univCP² : (T : Type₀) → (g : commf S² T) → ∃![ h ∈ (CP² → T) ] ((x : Bool → S²) → h (injCP² x) ≡ g .commf.f x)
-univCP² = snd CP²=SPS²
+    bpSPX : SPX
+    bpSPX = injSPX (λ x → bp)
+    
 
-baseCP² : CP²
-baseCP² = injCP² (λ x → base)
+    isConnectedSPX : ((x : X) → ∥ x ≡ bp ∥₁) → (x : SPX) → ∥ x ≡ bpSPX ∥₁
+    isConnectedSPX connectedX = SP.LEMConnectedness.classicality LEM bpSPX (λ f x → 
+        let map : commf X Bool
+            map = composeCommf (fst SPX=SPX) f
 
-isConnectedF : {X : Type₀} → {bp : X} → ((f : X → Bool) → (x : X) → ∥ f x ≡ f bp ∥₁) → (x : X) → ∥ bp ≡ x ∥₁
-isConnectedF {X} {bp} feq x = ∣ {!!} ∣₁
- 
-
-isConnectedCP² : (x : CP²) → ∥ baseCP² ≡ x ∥₁
-isConnectedCP² = isConnectedF (λ f x → 
-    let map : commf S² Bool
-        map = composeCommf (fst CP²=SPS²) f
-
-        univmapStr = univCP² Bool map
-        
-        univmap : CP² → Bool
-        univmap = fst (fst univmapStr)
-        
-        univmapCoh : (y : Bool → S²) → univmap (injCP² y) ≡ map .commf.f y
-        univmapCoh = snd (fst univmapStr)
-        
-        univmapUniv : (g : Σ[ h ∈ (CP² → Bool) ] ((y : Bool → S²) → h (injCP² y) ≡ map .commf.f y)) → univmap ≡ g .fst
-        univmapUniv g = cong fst (snd univmapStr g)
-
-        univmapEqF : univmap ≡ f
-        univmapEqF = univmapUniv (f , λ y → refl)
-
-        mapValue : Bool
-        mapValue = map .commf.f (λ x → base)
-
-        Bool→S²connected : (x y : Bool → S²) → ∥ x ≡ y ∥₁
-        Bool→S²connected x y = 
-            let consp : isContr (hLevelTrunc 2 (Susp (Susp (Susp ⊥))))
-                consp = isConnectedSubtr 2 1 (isConnectedSphere 3)
-                
-                susp³⊥≡S² : S² ≡ Susp (Susp (Susp ⊥))
-                susp³⊥≡S² = 
-                        S²
-                    ≡⟨ S²≡SuspS¹ ⟩
-                        Susp S¹
-                    ≡⟨ cong Susp (S¹≡SuspBool) ⟩
-                        Susp (Susp Bool)
-                    ≡⟨ cong (λ x → Susp (Susp x)) (ua Bool≃Susp⊥) ⟩
-                        Susp (Susp (Susp ⊥)) ∎
+            univmapStr = univSPX Bool map
             
-            in {!!}
+            univmap : SPX → Bool
+            univmap = fst (fst univmapStr)
+            
+            univmapCoh : (y : Bool → X) → univmap (injSPX y) ≡ map .commf.f y
+            univmapCoh = snd (fst univmapStr)
+            
+            univmapUniv : (g : Σ[ h ∈ (SPX → Bool) ] ((y : Bool → X) → h (injSPX y) ≡ map .commf.f y)) → univmap ≡ g .fst
+            univmapUniv g = cong fst (snd univmapStr g)
 
-        mapIsMerelyConstant : (y : Bool → S²) → ∥ mapValue ≡ map .commf.f y ∥₁
-        mapIsMerelyConstant y = PT.rec isPropPropTrunc (λ path → ∣ cong (λ t → f (fst CP²=SPS² .commf.f t)) (sym path) ∣₁) (Bool→S²connected y (λ x → base))
+            univmapEqF : univmap ≡ f
+            univmapEqF = univmapUniv (f , λ y → refl)
 
-        trivialMap : CP² → Bool
-        trivialMap x = mapValue
+            mapValue : Bool
+            mapValue = map .commf.f (λ x → bp)
 
-        trivialCoh : ∥ ((y : Bool → S²) → trivialMap (injCP² y) ≡ map .commf.f y) ∥₁
-        trivialCoh = {!!}
+            Bool→Xconnected : (x : Bool → X) → ∥ x ≡ (λ x → bp) ∥₁
+            Bool→Xconnected x = PT.rec2 isPropPropTrunc (λ xt xf → ∣ funExt (λ b → Cubical.Data.Bool.elim {ℓ-zero} {λ b → x b ≡ bp} xt xf b) ∣₁) (connectedX (x true)) (connectedX (x false))
 
-        univmapIsMerelyTrivial : ∥ univmap ≡ trivialMap ∥₁
-        univmapIsMerelyTrivial = {!!}
+            mapIsMerelyConstant : (y : Bool → X) → ∥ mapValue ≡ map .commf.f y ∥₁
+            mapIsMerelyConstant y = PT.rec isPropPropTrunc (λ path → ∣ cong (λ t → f (fst SPX=SPX .commf.f t)) (sym path) ∣₁) (Bool→Xconnected y)
 
-        thesis : ∥ f x ≡ trivialMap x ∥₁ 
-        thesis = PT.rec isPropPropTrunc (λ path → ∣ (funExtS⁻ (sym univmapEqF) x) ∙ (funExtS⁻ path x) ∣₁) univmapIsMerelyTrivial
+            trivialMap : SPX → Bool
+            trivialMap x = mapValue
 
-        in thesis
-    )
+            trivialCoh : ∥ ((y : Bool → X) → trivialMap (injSPX y) ≡ map .commf.f y) ∥₁
+            trivialCoh = AC mapIsMerelyConstant
 
-H⁰CP²≃ℤ : GroupIso (coHomGr 0 CP²) ℤGroup
-H⁰CP²≃ℤ = H⁰-connected baseCP² isConnectedCP²
+            univmapIsMerelyTrivial : ∥ univmap ≡ trivialMap ∥₁
+            univmapIsMerelyTrivial = PT.rec isPropPropTrunc (λ pf → ∣ univmapUniv (trivialMap , pf) ∣₁) trivialCoh
+
+            thesis : f x ≡ trivialMap x 
+            thesis = PT.rec (isSetBool (f x) (trivialMap x)) (λ path → (funExtS⁻ (sym univmapEqF) x) ∙ (funExtS⁻ path x)) univmapIsMerelyTrivial
+
+            in thesis
+        )
 
 
 unitUniq : (X : Type) → (bp : X) → 

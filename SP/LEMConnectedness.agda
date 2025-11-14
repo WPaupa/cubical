@@ -30,11 +30,11 @@ lemOnFalse em X pr nx = bycases (em X pr) where
   bycases (inr u) = cong inr (isPropX→⊥ u nx)
 
 connectedF : Type₁
-connectedF = (X : Type) → (bp : X) →
+connectedF = {X : Type} → (bp : X) →
   ((f : X → Bool) → (x : X) → f x ≡ f bp) → (x : X) → ∥ x ≡ bp ∥₁
 
 classicality : lem → connectedF
-classicality lem X bp eq x = by (cases x) where
+classicality lem {X} bp eq x = by (cases x) where
   cases : (x : X) → (∥ x ≡ bp ∥₁) ⊎ (∥ x ≡ bp ∥₁ → ⊥)
   cases x = lem (∥ x ≡ bp ∥₁) isPropPropTrunc
 
@@ -63,5 +63,5 @@ classicality lem X bp eq x = by (cases x) where
   by (inl x) = x
   by (inr x) = hardcase x
 
-nonclassicality : connectedF → lem
-nonclassicality connectedF X propX = {!!}
+--nonclassicality : connectedF → lem
+--nonclassicality connectedF X propX = {!!}
