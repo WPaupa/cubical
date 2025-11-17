@@ -6,6 +6,7 @@ open import SP.ComStr
 open import Cubical.Foundations.Prelude
 open import Cubical.Foundations.Univalence
 open import Cubical.Foundations.Isomorphism
+open import Cubical.Foundations.HLevels
 
 open import Cubical.HITs.PropositionalTruncation as PT
 
@@ -82,15 +83,40 @@ module _
         )
 
 
-unitUniq : (X : Type) → (bp : X) → 
-    ((Y : Type) → (f : X → Y) → (x : X) → f x ≡ f bp) → X ≡ Unit
-unitUniq X bp eq = ua (isoToEquiv (iso f g sec ret)) where
+unitIsSpUnit : {X : Type} → isSP Unit X → X ≡ Unit
+unitIsSpUnit {X} (inj , univ) = ua (isoToEquiv (iso f g sec ret)) where
     f : X → Unit
     f x = tt
+
     g : Unit → X
-    g tt = bp
-    sec : (b : Unit) → f (g b) ≡ b
+    g tt = inj .commf.f (λ x → tt)  
+
+    sec : (u : Unit) → f (g u) ≡ u
     sec tt = refl
 
-    ret : (x : X) → g (f x) ≡ x
-    ret x = sym (eq X (λ x → x) x) 
+    univUnit : ∃![ h ∈ (X → X) ] ((x : Bool → Unit) → h (inj .commf.f x) ≡ inj .commf.f x)
+    univUnit = univ X inj
+
+    bpX : X
+    bpX = g tt
+
+    univmap : X → X
+    univmap = fst (fst univUnit)
+
+    univmapUniv : (gf : Σ[ h ∈ (X → X) ] ((y : Bool → Unit) → h (inj .commf.f y) ≡ inj .commf.f y)) → univmap ≡ gf .fst
+    univmapUniv gf = cong fst (snd univUnit gf)
+
+    univmapEqId : univmap ≡ (λ x → x)
+    univmapEqId = univmapUniv ((λ x → x) , λ y → refl)
+
+    isPropBool→Unit : isProp (Bool → Unit)
+    isPropBool→Unit = isProp→ isPropUnit
+
+    constSat : (y : Bool → Unit) → bpX ≡ inj .commf.f y
+    constSat y = cong (inj .commf.f) (isPropBool→Unit (λ x → tt) y)
+
+    univmapEqConst : univmap ≡ (λ x → bpX)
+    univmapEqConst = univmapUniv ((λ x → bpX) , constSat)
+
+    ret : (x : X) → bpX ≡ x
+    ret x = cong (λ f → f x) (sym univmapEqConst ∙ univmapEqId)
