@@ -9,14 +9,21 @@ open import Cubical.Foundations.Isomorphism
 open import Cubical.Foundations.HLevels
 
 open import Cubical.HITs.PropositionalTruncation as PT
+open import Cubical.HITs.SetTruncation as ST
 
 open import Cubical.Homotopy.Connected
+open import Cubical.Homotopy.EilenbergMacLane.Base
+
+open import Cubical.Algebra.AbGroup.Base
 
 open import Cubical.Data.Bool
 open import Cubical.Data.Unit
 open import Cubical.Data.Empty
 open import Cubical.Data.Sum
 open import Cubical.Data.Sigma
+open import Cubical.Data.Nat
+
+open import Cubical.Cohomology.EilenbergMacLane.Base
 
 isSP : Type → Type → Type₁
 isSP X SPX = Σ[ f ∈ commf X SPX ] ((T : Type) → (g : commf X T) → ∃![ h ∈ (SPX → T) ] ((x : Bool → X) → h (f .commf.f x) ≡ g .commf.f x))
@@ -62,10 +69,10 @@ module _
             mapValue = map .commf.f (λ x → bp)
 
             Bool→Xconnected : (x : Bool → X) → ∥ x ≡ (λ x → bp) ∥₁
-            Bool→Xconnected x = PT.rec2 isPropPropTrunc (λ xt xf → ∣ funExt (λ b → Cubical.Data.Bool.elim {ℓ-zero} {λ b → x b ≡ bp} xt xf b) ∣₁) (connectedX (x true)) (connectedX (x false))
+            Bool→Xconnected x = PT.map2 (λ xt xf → funExt (λ b → Cubical.Data.Bool.elim {ℓ-zero} {λ b → x b ≡ bp} xt xf b)) (connectedX (x true)) (connectedX (x false))
 
             mapIsMerelyConstant : (y : Bool → X) → ∥ mapValue ≡ map .commf.f y ∥₁
-            mapIsMerelyConstant y = PT.rec isPropPropTrunc (λ path → ∣ cong (λ t → f (fst SPX=SPX .commf.f t)) (sym path) ∣₁) (Bool→Xconnected y)
+            mapIsMerelyConstant y = PT.map (λ path → cong (λ t → f (fst SPX=SPX .commf.f t)) (sym path) ) (Bool→Xconnected y)
 
             trivialMap : SPX → Bool
             trivialMap x = mapValue
@@ -74,13 +81,54 @@ module _
             trivialCoh = AC mapIsMerelyConstant
 
             univmapIsMerelyTrivial : ∥ univmap ≡ trivialMap ∥₁
-            univmapIsMerelyTrivial = PT.rec isPropPropTrunc (λ pf → ∣ univmapUniv (trivialMap , pf) ∣₁) trivialCoh
+            univmapIsMerelyTrivial = PT.map (λ pf → univmapUniv (trivialMap , pf) ) trivialCoh
 
             thesis : f x ≡ trivialMap x 
             thesis = PT.rec (isSetBool (f x) (trivialMap x)) (λ path → (funExtS⁻ (sym univmapEqF) x) ∙ (funExtS⁻ path x)) univmapIsMerelyTrivial
 
             in thesis
         )
+    
+    inheritsTrivialCohSPX : {G : AbGroup ℓ-zero} → (n : ℕ) → isProp (coHom n G (Bool → X)) → isProp (coHom n G SPX)
+    inheritsTrivialCohSPX {G} n cohX cl1 cl2 = ST.elim2 (λ a b → isProp→isSet (isSetSetTrunc a b)) (λ a b → (thesis a) ∙ (sym (thesis b))) cl1 cl2 where
+
+        zeroX : (Bool → X) → EM G n
+        zeroX x = 0ₖ n
+
+        zeroSPX : SPX → EM G n
+        zeroSPX x = 0ₖ n
+
+        cohTrunc : (f : (Bool → X) → EM G n) → ∥ f ≡ zeroX ∥₁
+        cohTrunc f = PathIdTrunc₀Iso .Iso.fun (cohX (∣ f ∣₂) (∣ zeroX ∣₂))
+        
+        thesis : (f : SPX → EM G n) → ∣ f ∣₂ ≡ ∣ zeroSPX ∣₂
+        thesis f = PathIdTrunc₀Iso .Iso.inv fin where
+            mapf : commf X (EM G n)
+            mapf = composeCommf (fst SPX=SPX) f
+
+            univmapStr = univSPX (EM G n) mapf
+
+            univmap : SPX → EM G n
+            univmap = fst (fst univmapStr)
+
+            univmapCoh : (y : Bool → X) → univmap (injSPX y) ≡ mapf .commf.f y
+            univmapCoh = snd (fst univmapStr)
+            
+            univmapUniv : (g : Σ[ h ∈ (SPX → EM G n) ] ((y : Bool → X) → h (injSPX y) ≡ mapf .commf.f y)) → univmap ≡ g .fst
+            univmapUniv g = cong fst (snd univmapStr g)
+
+            univmapEqF : univmap ≡ f
+            univmapEqF = univmapUniv (f , λ y → refl)
+
+            cohZero : ∥ ((y : Bool → X) → 0ₖ n ≡ mapf .commf.f y) ∥₁
+            cohZero = PT.map (λ path y → cong (λ f → f y) (sym path)) (cohTrunc (mapf .commf.f))
+
+            univmapMerelyZero : ∥ univmap ≡ zeroSPX ∥₁
+            univmapMerelyZero = PT.map (λ pf → univmapUniv (zeroSPX , pf)) cohZero
+
+            fin : ∥ f ≡ zeroSPX ∥₁
+            fin = PT.map (λ path → (sym univmapEqF) ∙ path) univmapMerelyZero 
+
 
 
 unitIsSpUnit : {X : Type} → isSP Unit X → X ≡ Unit
