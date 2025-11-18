@@ -130,6 +130,61 @@ module _
             fin = PT.map (λ path → (sym univmapEqF) ∙ path) univmapMerelyZero 
 
 
+uniqueSP : {X Y Z : Type} → isSP X Y → isSP X Z → Y ≡ Z
+uniqueSP {X} {Y} {Z} (injY , univY) (injZ , univZ) = ua (isoToEquiv (iso f g sec ret)) where
+    strF = univY Z injZ
+    strG = univZ Y injY
+    
+    f : Y → Z
+    f = strF .fst .fst
+
+    g : Z → Y
+    g = strG .fst .fst
+
+    fCoh : (x : Bool → X) → f (injY .commf.f x) ≡ injZ .commf.f x
+    fCoh = strF .fst .snd
+
+    gCoh : (x : Bool → X) → g (injZ .commf.f x) ≡ injY .commf.f x
+    gCoh = strG .fst .snd
+
+    strIdY = univY Y injY
+    strIdZ = univZ Z injZ
+
+    idmapY : Y → Y
+    idmapY = strIdY .fst .fst
+
+    idmapZ : Z → Z
+    idmapZ = strIdZ .fst .fst
+
+    idmapYUniv : (hs : Σ[ h ∈ (Y → Y) ] ((y : Bool → X) → h (injY .commf.f y) ≡ injY .commf.f y)) → idmapY ≡ hs .fst
+    idmapYUniv hs = cong fst (snd strIdY hs)
+
+    idmapZUniv : (hs : Σ[ h ∈ (Z → Z) ] ((y : Bool → X) → h (injZ .commf.f y) ≡ injZ .commf.f y)) → idmapZ ≡ hs .fst
+    idmapZUniv hs = cong fst (snd strIdZ hs)
+
+    idmapYIsId : idmapY ≡ (λ x → x)
+    idmapYIsId = idmapYUniv ((λ x → x) , (λ x → refl))
+
+    idmapZIsId : idmapZ ≡ (λ x → x)
+    idmapZIsId = idmapZUniv ((λ x → x) , (λ x → refl))
+
+    g∘fCoh : idmapY ≡ (λ x → g (f x))
+    g∘fCoh = idmapYUniv ((λ x → g (f x)) , (λ x → (cong g (fCoh x)) ∙ gCoh x))
+
+    f∘gCoh : idmapZ ≡ (λ x → f (g x))
+    f∘gCoh = idmapZUniv ((λ x → f (g x)) , (λ x → (cong f (gCoh x)) ∙ fCoh x))
+
+    g∘fIsId : (λ x → g (f x)) ≡ (λ x → x)
+    g∘fIsId = (sym g∘fCoh) ∙ idmapYIsId
+
+    f∘gIsId : (λ x → f (g x)) ≡ (λ x → x)
+    f∘gIsId = (sym f∘gCoh) ∙ idmapZIsId
+
+    sec : (z : Z) → f (g z) ≡ z
+    sec z = cong (λ h → h z) f∘gIsId
+
+    ret : (y : Y) → g (f y) ≡ y
+    ret y = cong (λ h → h y) g∘fIsId
 
 unitIsSpUnit : {X : Type} → isSP Unit X → X ≡ Unit
 unitIsSpUnit {X} (inj , univ) = ua (isoToEquiv (iso f g sec ret)) where
