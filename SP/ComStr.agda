@@ -2,17 +2,18 @@ module SP.ComStr where
 
 open import Cubical.Foundations.Prelude
 
-open import Cubical.HITs.RPn.Base renaming (Bool* to BoolRefl)
+open import SP.RPn -- RPn by Axel Ljungstrom & David Warn
+--open import Cubical.HITs.RPn.Base
 open import Cubical.HITs.PropositionalTruncation as PT
 
 open import Cubical.Data.Sigma
-open import Cubical.Data.Bool renaming (elim to makepair)
+open import Cubical.Data.Bool hiding (Bool*) renaming (elim to makepair)
 
 record commf (X Y : Type) : Type₁ where
     field
         f : (Bool → X) → Y
         comstr : (B : 2-EltType₀) → (fst B → X) → Y
-        coh : comstr BoolRefl ≡ f
+        coh : comstr Bool* ≡ f
 
 composeCommf : {X Y Z : Type} → commf X Y → (Y → Z) → commf X Z
 composeCommf (record {f = f; comstr = comstr; coh = coh}) g = record { 
@@ -28,28 +29,34 @@ constantIsCommutative {X} {Y} y f const = record {
         coh = sym (funExt const)
     }
 
-BoolFlip : 2-EltType₀
-BoolFlip = Bool , ∣ notEquiv ∣₁
 
-flipPath : BoolRefl ≡ BoolFlip
-flipPath = Σ≡Prop (λ _ → isPropPropTrunc) refl
+commfCommutative : {X Y : Type} → (f : commf X Y) → (a b : X) → 
+    f .commf.f (makepair a b) ≡ f .commf.f (makepair b a)
+commfCommutative {X} {Y} f a b = thesis where
+    casesTrue : (CasesRP Bool* {A = λ _ → X} true a b true ≡ a) × (CasesRP Bool* {A = λ _ → X} true a b false ≡ b)
+    casesTrue = CasesRPβ {ℓ-zero} Bool* {A = λ _ → X} true a b
 
-applyType : {X : Type} → (b : 2-EltType₀) → ∥ ((Bool → X) → (fst b → X)) ∥₁
-applyType (b , equiv) = PT.rec isPropPropTrunc (λ eqv → ∣ (λ f b → f (fst eqv b)) ∣₁) equiv
+    casesTrueFun : CasesRP Bool* {A = λ _ → X} true a b ≡ makepair a b
+    casesTrueFun = funExt casesTrueBool where
+        casesTrueBool : (t : Bool) → CasesRP Bool* {A = λ _ → X} true a b t ≡ makepair a b t
+        casesTrueBool true = fst casesTrue
+        casesTrueBool false = snd casesTrue
+    
+    casesFalse : (CasesRP Bool* {A = λ _ → X} false a b false ≡ a) × (CasesRP Bool* {A = λ _ → X} false a b true ≡ b)
+    casesFalse = CasesRPβ {ℓ-zero} Bool* {A = λ _ → X} false a b
 
-{-
-commfComm : {X Y : Type} → (f : commf X Y) → (a b : X) → f .commf.f (makepair a b) ≡ f .commf.f (makepair b a)
-commfComm {X} {Y} f a b = (def1 a b) ∙ defsEqual ∙ (sym def2) where
+    casesFalseFun : CasesRP Bool* {A = λ _ → X} false a b ≡ makepair b a
+    casesFalseFun = funExt casesFalseBool where
+        casesFalseBool : (t : Bool) → CasesRP Bool* {A = λ _ → X} false a b t ≡ makepair b a t
+        casesFalseBool false = fst casesFalse
+        casesFalseBool true = snd casesFalse
 
-    def1 : (a b : X) → f .commf.f (makepair a b) ≡ f .commf.comstr BoolRefl (makepair a b)
-    def1 a b = sym (cong (λ g → g (makepair a b)) (f .commf.coh))
+    mainLemma :
+        f .commf.comstr Bool* (CasesRP Bool* false a b) ≡ f .commf.comstr Bool* (makepair a b)
+    mainLemma = JRP∞ (λ B t → f .commf.comstr B (CasesRP B t a b) ≡ f .commf.comstr Bool* (makepair a b)) (cong (f .commf.comstr Bool*) casesTrueFun) {Bool*} {false}
 
-    def15 : f .commf.comstr BoolRefl ≡ f .commf.comstr BoolFlip
-    def15 = cong (λ g → f .commf.comstr g) flipPath
+    comm : f .commf.comstr Bool* (makepair b a) ≡ f .commf.comstr Bool* (makepair a b)
+    comm = cong (f .commf.comstr Bool*) (sym casesFalseFun) ∙ mainLemma
 
-    def2 : f .commf.f (makepair b a) ≡ f .commf.comstr BoolFlip (makepair b a)
-    def2 = (def1 b a) ∙ cong (λ g → g (makepair b a)) def15
-
-    defsEqual : f .commf.comstr BoolRefl (makepair a b) ≡ f .commf.comstr BoolFlip (makepair b a)
-    defsEqual = {!!}
--}
+    thesis : f .commf.f (makepair a b) ≡ f .commf.f (makepair b a)
+    thesis = cong (λ F → F (makepair a b)) (sym (f .commf.coh)) ∙ sym comm ∙ cong (λ F → F (makepair b a)) (f .commf.coh)
