@@ -186,6 +186,10 @@ uniqueSP {X} {Y} {Z} (injY , univY) (injZ , univZ) = ua (isoToEquiv (iso f g sec
     ret : (y : Y) → g (f y) ≡ y
     ret y = cong (λ h → h y) g∘fIsId
 
+functorSP : {X Y SPX SPY : Type} → {isSP X SPX} → {isSP Y SPY} → (f : X → Y) → SPX → SPY
+functorSP {X} {Y} {SPX} {SPY} {isSPX} {isSPY} f = 
+    snd isSPX SPY (precomposeCommf f (fst isSPY)) .fst .fst
+
 unitIsSpUnit : {X : Type} → isSP Unit X → X ≡ Unit
 unitIsSpUnit {X} (inj , univ) = ua (isoToEquiv (iso f g sec ret)) where
     f : X → Unit

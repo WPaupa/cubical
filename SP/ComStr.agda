@@ -22,6 +22,13 @@ composeCommf (record {f = f; comstr = comstr; coh = coh}) g = record {
         coh = cong (λ a x → g (a x)) coh 
     }
 
+precomposeCommf : {X Y Z : Type} → (X → Y) → commf Y Z → commf X Z
+precomposeCommf f (record {f = g; comstr = comstr; coh = coh}) = record {
+        f = λ x → g (λ b → f (x b));
+        comstr = λ B x → comstr B (λ b → f (x b));
+        coh = cong (λ a x → a (λ b → f (x b))) coh
+    }
+
 constantIsCommutative : {X Y : Type} → (y : Y) → (f : (Bool → X) → Y) → ((x : Bool → X) → f x ≡ y) → commf X Y
 constantIsCommutative {X} {Y} y f const = record {
         f = f;
@@ -29,10 +36,9 @@ constantIsCommutative {X} {Y} y f const = record {
         coh = sym (funExt const)
     }
 
-
-commfCommutative : {X Y : Type} → (f : commf X Y) → (a b : X) → 
-    f .commf.f (makepair a b) ≡ f .commf.f (makepair b a)
-commfCommutative {X} {Y} f a b = thesis where
+commutativityStr : {X Y : Type} → (comstr : (B : 2-EltType₀) → (fst B → X) → Y) → (a b : X) →
+    comstr Bool* (makepair b a) ≡ comstr Bool* (makepair a b)
+commutativityStr {X} {Y} comstr a b = cong (comstr Bool*) (sym casesFalseFun) ∙ mainLemma where
     casesTrue : (CasesRP Bool* {A = λ _ → X} true a b true ≡ a) × (CasesRP Bool* {A = λ _ → X} true a b false ≡ b)
     casesTrue = CasesRPβ {ℓ-zero} Bool* {A = λ _ → X} true a b
 
@@ -52,11 +58,13 @@ commfCommutative {X} {Y} f a b = thesis where
         casesFalseBool true = snd casesFalse
 
     mainLemma :
-        f .commf.comstr Bool* (CasesRP Bool* false a b) ≡ f .commf.comstr Bool* (makepair a b)
-    mainLemma = JRP∞ (λ B t → f .commf.comstr B (CasesRP B t a b) ≡ f .commf.comstr Bool* (makepair a b)) (cong (f .commf.comstr Bool*) casesTrueFun) {Bool*} {false}
+        comstr Bool* (CasesRP Bool* false a b) ≡ comstr Bool* (makepair a b)
+    mainLemma = JRP∞ (λ B t → comstr B (CasesRP B t a b) ≡ comstr Bool* (makepair a b)) 
+        (cong (comstr Bool*) casesTrueFun) {Bool*} {false}
 
-    comm : f .commf.comstr Bool* (makepair b a) ≡ f .commf.comstr Bool* (makepair a b)
-    comm = cong (f .commf.comstr Bool*) (sym casesFalseFun) ∙ mainLemma
-
-    thesis : f .commf.f (makepair a b) ≡ f .commf.f (makepair b a)
-    thesis = cong (λ F → F (makepair a b)) (sym (f .commf.coh)) ∙ sym comm ∙ cong (λ F → F (makepair b a)) (f .commf.coh)
+commfCommutative : {X Y : Type} → (f : commf X Y) → (a b : X) → 
+    f .commf.f (makepair a b) ≡ f .commf.f (makepair b a)
+commfCommutative {X} {Y} f a b = 
+    cong (λ F → F (makepair a b)) (sym (f .commf.coh)) ∙ 
+    sym (commutativityStr (f .commf.comstr) a b) ∙ 
+    cong (λ F → F (makepair b a)) (f .commf.coh)

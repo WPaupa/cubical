@@ -14,14 +14,14 @@ open import SP.RPn
 open import Cubical.Data.Sigma
 open import Cubical.Data.Sum as DS
 open import Cubical.Data.Unit
-open import Cubical.Data.Bool
+open import Cubical.Data.Bool hiding (Bool*)
 
 Three = Bool ⊎ Unit
 3-EltType₀ = TypeEqvTo ℓ-zero Three
 extend : 2-EltType₀ → 3-EltType₀
 extend (B , eqv) = (B ⊎ Unit , PT.map (λ eq → ⊎-equiv eq (idEquiv _)) eqv)
 Three* : 3-EltType₀
-Three* = extend SP.RPn.Bool* 
+Three* = extend Bool* 
 record comm3 (X Y : Type) : Type₁ where
     field
         f : (Three → X) → Y
