@@ -36,31 +36,31 @@ constantIsCommutative {X} {Y} y f const = record {
         coh = sym (funExt const)
     }
 
-commutativityStr : {X Y : Type} → (comstr : (B : 2-EltType₀) → (fst B → X) → Y) → (a b : X) →
-    comstr Bool* (makepair b a) ≡ comstr Bool* (makepair a b)
-commutativityStr {X} {Y} comstr a b = cong (comstr Bool*) (sym casesFalseFun) ∙ mainLemma where
+casesTrueFun : {X : Type} → (a b : X) → CasesRP Bool* {A = λ _ → X} true a b ≡ makepair a b
+casesTrueFun {X} a b = funExt casesTrueBool where
     casesTrue : (CasesRP Bool* {A = λ _ → X} true a b true ≡ a) × (CasesRP Bool* {A = λ _ → X} true a b false ≡ b)
     casesTrue = CasesRPβ {ℓ-zero} Bool* {A = λ _ → X} true a b
 
-    casesTrueFun : CasesRP Bool* {A = λ _ → X} true a b ≡ makepair a b
-    casesTrueFun = funExt casesTrueBool where
-        casesTrueBool : (t : Bool) → CasesRP Bool* {A = λ _ → X} true a b t ≡ makepair a b t
-        casesTrueBool true = fst casesTrue
-        casesTrueBool false = snd casesTrue
-    
+    casesTrueBool : (t : Bool) → CasesRP Bool* {A = λ _ → X} true a b t ≡ makepair a b t
+    casesTrueBool true = fst casesTrue
+    casesTrueBool false = snd casesTrue
+
+casesFalseFun : {X : Type} → (a b : X) → CasesRP Bool* {A = λ _ → X} false a b ≡ makepair b a
+casesFalseFun {X} a b = funExt casesFalseBool where
     casesFalse : (CasesRP Bool* {A = λ _ → X} false a b false ≡ a) × (CasesRP Bool* {A = λ _ → X} false a b true ≡ b)
     casesFalse = CasesRPβ {ℓ-zero} Bool* {A = λ _ → X} false a b
 
-    casesFalseFun : CasesRP Bool* {A = λ _ → X} false a b ≡ makepair b a
-    casesFalseFun = funExt casesFalseBool where
-        casesFalseBool : (t : Bool) → CasesRP Bool* {A = λ _ → X} false a b t ≡ makepair b a t
-        casesFalseBool false = fst casesFalse
-        casesFalseBool true = snd casesFalse
+    casesFalseBool : (t : Bool) → CasesRP Bool* {A = λ _ → X} false a b t ≡ makepair b a t
+    casesFalseBool false = fst casesFalse
+    casesFalseBool true = snd casesFalse
 
+commutativityStr : {X Y : Type} → (comstr : (B : 2-EltType₀) → (fst B → X) → Y) → (a b : X) →
+    comstr Bool* (makepair b a) ≡ comstr Bool* (makepair a b)
+commutativityStr {X} {Y} comstr a b = cong (comstr Bool*) (sym (casesFalseFun a b)) ∙ mainLemma where
     mainLemma :
         comstr Bool* (CasesRP Bool* false a b) ≡ comstr Bool* (makepair a b)
     mainLemma = JRP∞ (λ B t → comstr B (CasesRP B t a b) ≡ comstr Bool* (makepair a b)) 
-        (cong (comstr Bool*) casesTrueFun) {Bool*} {false}
+        (cong (comstr Bool*) (casesTrueFun a b)) {Bool*} {false}
 
 commfCommutative : {X Y : Type} → (f : commf X Y) → (a b : X) → 
     f .commf.f (makepair a b) ≡ f .commf.f (makepair b a)
