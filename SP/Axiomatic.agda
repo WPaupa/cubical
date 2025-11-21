@@ -24,17 +24,18 @@ open import Cubical.Data.Sigma
 open import Cubical.Data.Nat
 
 open import Cubical.Cohomology.EilenbergMacLane.Base
+private
+    variable
+        ℓ : Level
 
-isSP : Type → Type → Type₁
-isSP X SPX = Σ[ f ∈ commf X SPX ] ((T : Type) → (g : commf X T) → ∃![ h ∈ (SPX → T) ] ((x : Bool → X) → h (f .commf.f x) ≡ g .commf.f x))
+isSP : Type ℓ → Type ℓ → Type (ℓ-suc ℓ)
+isSP {ℓ} X SPX = Σ[ f ∈ commf X SPX ] ((T : Type ℓ) → (g : commf X T) → ∃![ h ∈ (SPX → T) ] ((x : Bool → X) → h (f .commf.f x) ≡ g .commf.f x))
 
 module _
     {X : Type}
     (bp : X)
     (SPX : Type)
-    (SPX=SPX : isSP X SPX) 
-    (AC : {A : Type} {B : A → Type} → ((a : A) → ∥ B a ∥₁) → ∥ ((a : A) → B a) ∥₁)
-    (LEM : (X : Type) → isProp X → (X ⊎ (X → ⊥))) where
+    (SPX=SPX : isSP X SPX) where
 
     injSPX : (Bool → X) → SPX
     injSPX = fst SPX=SPX .commf.f
@@ -45,49 +46,52 @@ module _
     bpSPX : SPX
     bpSPX = injSPX (λ x → bp)
     
+    module _
+        (AC : {A : Type} {B : A → Type} → ((a : A) → ∥ B a ∥₁) → ∥ ((a : A) → B a) ∥₁)
+        (LEM : (X : Type) → isProp X → (X ⊎ (X → ⊥))) where
+    
+        isConnectedSPX : ((x : X) → ∥ x ≡ bp ∥₁) → (x : SPX) → ∥ x ≡ bpSPX ∥₁
+        isConnectedSPX connectedX = SP.LEMConnectedness.classicality LEM bpSPX (λ f x → 
+            let map : commf X Bool
+                map = composeCommf (fst SPX=SPX) f
 
-    isConnectedSPX : ((x : X) → ∥ x ≡ bp ∥₁) → (x : SPX) → ∥ x ≡ bpSPX ∥₁
-    isConnectedSPX connectedX = SP.LEMConnectedness.classicality LEM bpSPX (λ f x → 
-        let map : commf X Bool
-            map = composeCommf (fst SPX=SPX) f
+                univmapStr = univSPX Bool map
+                
+                univmap : SPX → Bool
+                univmap = fst (fst univmapStr)
+                
+                univmapCoh : (y : Bool → X) → univmap (injSPX y) ≡ map .commf.f y
+                univmapCoh = snd (fst univmapStr)
+                
+                univmapUniv : (g : Σ[ h ∈ (SPX → Bool) ] ((y : Bool → X) → h (injSPX y) ≡ map .commf.f y)) → univmap ≡ g .fst
+                univmapUniv g = cong fst (snd univmapStr g)
 
-            univmapStr = univSPX Bool map
-            
-            univmap : SPX → Bool
-            univmap = fst (fst univmapStr)
-            
-            univmapCoh : (y : Bool → X) → univmap (injSPX y) ≡ map .commf.f y
-            univmapCoh = snd (fst univmapStr)
-            
-            univmapUniv : (g : Σ[ h ∈ (SPX → Bool) ] ((y : Bool → X) → h (injSPX y) ≡ map .commf.f y)) → univmap ≡ g .fst
-            univmapUniv g = cong fst (snd univmapStr g)
+                univmapEqF : univmap ≡ f
+                univmapEqF = univmapUniv (f , λ y → refl)
 
-            univmapEqF : univmap ≡ f
-            univmapEqF = univmapUniv (f , λ y → refl)
+                mapValue : Bool
+                mapValue = map .commf.f (λ x → bp)
 
-            mapValue : Bool
-            mapValue = map .commf.f (λ x → bp)
+                Bool→Xconnected : (x : Bool → X) → ∥ x ≡ (λ x → bp) ∥₁
+                Bool→Xconnected x = PT.map2 (λ xt xf → funExt (λ b → Cubical.Data.Bool.elim {ℓ-zero} {λ b → x b ≡ bp} xt xf b)) (connectedX (x true)) (connectedX (x false))
 
-            Bool→Xconnected : (x : Bool → X) → ∥ x ≡ (λ x → bp) ∥₁
-            Bool→Xconnected x = PT.map2 (λ xt xf → funExt (λ b → Cubical.Data.Bool.elim {ℓ-zero} {λ b → x b ≡ bp} xt xf b)) (connectedX (x true)) (connectedX (x false))
+                mapIsMerelyConstant : (y : Bool → X) → ∥ mapValue ≡ map .commf.f y ∥₁
+                mapIsMerelyConstant y = PT.map (λ path → cong (λ t → f (fst SPX=SPX .commf.f t)) (sym path) ) (Bool→Xconnected y)
 
-            mapIsMerelyConstant : (y : Bool → X) → ∥ mapValue ≡ map .commf.f y ∥₁
-            mapIsMerelyConstant y = PT.map (λ path → cong (λ t → f (fst SPX=SPX .commf.f t)) (sym path) ) (Bool→Xconnected y)
+                trivialMap : SPX → Bool
+                trivialMap x = mapValue
 
-            trivialMap : SPX → Bool
-            trivialMap x = mapValue
+                trivialCoh : ∥ ((y : Bool → X) → trivialMap (injSPX y) ≡ map .commf.f y) ∥₁
+                trivialCoh = AC mapIsMerelyConstant
 
-            trivialCoh : ∥ ((y : Bool → X) → trivialMap (injSPX y) ≡ map .commf.f y) ∥₁
-            trivialCoh = AC mapIsMerelyConstant
+                univmapIsMerelyTrivial : ∥ univmap ≡ trivialMap ∥₁
+                univmapIsMerelyTrivial = PT.map (λ pf → univmapUniv (trivialMap , pf) ) trivialCoh
 
-            univmapIsMerelyTrivial : ∥ univmap ≡ trivialMap ∥₁
-            univmapIsMerelyTrivial = PT.map (λ pf → univmapUniv (trivialMap , pf) ) trivialCoh
+                thesis : f x ≡ trivialMap x 
+                thesis = PT.rec (isSetBool (f x) (trivialMap x)) (λ path → (funExtS⁻ (sym univmapEqF) x) ∙ (funExtS⁻ path x)) univmapIsMerelyTrivial
 
-            thesis : f x ≡ trivialMap x 
-            thesis = PT.rec (isSetBool (f x) (trivialMap x)) (λ path → (funExtS⁻ (sym univmapEqF) x) ∙ (funExtS⁻ path x)) univmapIsMerelyTrivial
-
-            in thesis
-        )
+                in thesis
+            )
     
     inheritsTrivialCohSPX : {G : AbGroup ℓ-zero} → (n : ℕ) → isProp (coHom n G (Bool → X)) → isProp (coHom n G SPX)
     inheritsTrivialCohSPX {G} n cohX cl1 cl2 = ST.elim2 (λ a b → isProp→isSet (isSetSetTrunc a b)) (λ a b → (thesis a) ∙ (sym (thesis b))) cl1 cl2 where
@@ -186,9 +190,32 @@ uniqueSP {X} {Y} {Z} (injY , univY) (injZ , univZ) = ua (isoToEquiv (iso f g sec
     ret : (y : Y) → g (f y) ≡ y
     ret y = cong (λ h → h y) g∘fIsId
 
-functorSP : {X Y SPX SPY : Type} → {isSP X SPX} → {isSP Y SPY} → (f : X → Y) → SPX → SPY
-functorSP {X} {Y} {SPX} {SPY} {isSPX} {isSPY} f = 
-    snd isSPX SPY (precomposeCommf f (fst isSPY)) .fst .fst
+module operations
+    {X Y : Type}
+    (bpX : X)
+    (bpY : Y)
+    (SPX : Type)
+    (SPY : Type)
+    (isSPX : isSP X SPX)
+    (isSPY : isSP Y SPY) where
+
+    functorSP : (X → Y) → SPX → SPY
+    functorSP f = 
+        snd isSPX SPY (precomposeCommf f (fst isSPY)) .fst .fst
+
+{-
+    sumSP : isSP (X ⊎ Y) ((X × Y) ⊎ (SPX ⊎ SPY))
+    sumSP = {!!} where
+        injSum : (X ⊎ Y) → (X ⊎ Y) → ((X × Y) ⊎ (SPX ⊎ SPY))
+        injSum (inl x) (inr x') = inr (inl (fst isSPX (Cubical.Data.Bool.elim x x')))
+
+        injSumCommf : commf (X ⊎ Y) ((X × Y) ⊎ (SPX ⊎ SPY))
+        injSumCommf = record {
+                f = {!!};
+                comstr = {!!};
+                coh = {!!}
+            }
+-}
 
 unitIsSpUnit : {X : Type} → isSP Unit X → X ≡ Unit
 unitIsSpUnit {X} (inj , univ) = ua (isoToEquiv (iso f g sec ret)) where

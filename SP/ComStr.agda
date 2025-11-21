@@ -9,7 +9,11 @@ open import Cubical.HITs.PropositionalTruncation as PT
 open import Cubical.Data.Sigma
 open import Cubical.Data.Bool hiding (Bool*) renaming (elim to makepair)
 
-record commf (X Y : Type) : Type₁ where
+private
+    variable
+        ℓ : Level
+
+record commf (X Y : Type ℓ) : Type (ℓ-max ℓ (ℓ-suc ℓ-zero)) where
     field
         f : (Bool → X) → Y
         comstr : (B : 2-EltType₀) → (fst B → X) → Y
